@@ -1,0 +1,79 @@
+{
+  "source_metadata": {
+    "provider": "ITVIEC",
+    "original_id": "jobKey",
+    "original_url": "url",
+    "slug": "slug"
+  },
+  "company_info": {
+    "name": "company",
+    "slug": "companySlug",
+    "logo_url": "companyLogo",
+    "profile_url": "companyUrl",
+    "industries": {
+      "type": "array",
+      "field": "companyInfo.Company industry"
+    },
+    "size": "companyInfo.Company size",
+    "address": "companyInfo.Country",
+    "country": "companyInfo.Country"
+  },
+  "basic_info": {
+    "raw_title": "title",
+    "position": null,
+    "levels": {
+      "type": "array",
+      "field": "jobLevels"
+    },
+    "contract_types": {
+      "type": "array",
+      "field": "contract_types_str"
+    },
+    "working_modes": {
+      "type": "array",
+      "field": "workingMode"
+    },
+    "locations": {
+      "type": "array",
+      "field": "location"
+    },
+    "quantity": "num_job_openings",
+    "gender": null,
+    "majors": null,
+    "tags": {
+      "type": "concatenate_arrays",
+      "fields": ["tags", "skills"]
+    }
+  },
+  "working_conditions": {
+    "working_time_text": "companyInfo.Working hours",
+    "working_days": "companyInfo.Working days",
+    "overtime_policy": "companyInfo.Overtime policy",
+    "salary_min": "minSalary",
+    "salary_max": "maxSalary",
+    "salary_raw_text": {
+      "type": "salary_text",
+      "min_field": "minSalary",
+      "max_field": "maxSalary",
+      "raw_field": "salary"
+    },
+    "is_negotiable": {
+      "type": "negotiable",
+      "field": "salary"
+    }
+  },
+  "display_content": {
+    "raw_description": "jobDescription",
+    "raw_requirements": "requirements",
+    "raw_benefits": "benefits",
+    "raw_experience_text": "experiences_str",
+    "raw_reasons": "reasons"
+  },
+  "timestamps": {
+    "posted_at": "postedTime",
+    "updated_at": "refreshed",
+    "deadline_at": "expires",
+    "crawled_at": "scrapedAt",
+    "status": "status_display"
+  }
+}

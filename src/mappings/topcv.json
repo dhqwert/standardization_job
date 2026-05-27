@@ -1,0 +1,73 @@
+{
+  "source_metadata": {
+    "provider": "TOPCV",
+    "original_id": "id",
+    "original_url": "url",
+    "slug": "slug"
+  },
+  "company_info": {
+    "name": "company",
+    "slug": "companySlug",
+    "logo_url": "companyLogo",
+    "profile_url": "companyUrl",
+    "industries": null,
+    "size": "companySize",
+    "address": "companyAddress",
+    "country": null
+  },
+  "basic_info": {
+    "raw_title": "title",
+    "position": "position",
+    "levels": {
+      "type": "array",
+      "field": "jobLevels"
+    },
+    "contract_types": {
+      "type": "array",
+      "field": "type"
+    },
+    "working_modes": {
+      "type": "array",
+      "field": "jobTypes"
+    },
+    "locations": {
+      "type": "array",
+      "field": "location"
+    },
+    "quantity": "quantity",
+    "gender": "gender",
+    "majors": null,
+    "tags": null
+  },
+  "working_conditions": {
+    "working_time_text": "workingTime",
+    "working_days": null,
+    "overtime_policy": null,
+    "salary_min": "salaryRange.min",
+    "salary_max": "salaryRange.max",
+    "salary_raw_text": {
+      "type": "salary_text",
+      "min_field": "salaryRange.min",
+      "max_field": "salaryRange.max",
+      "raw_field": "salary"
+    },
+    "is_negotiable": {
+      "type": "negotiable",
+      "field": "salary"
+    }
+  },
+  "display_content": {
+    "raw_description": "description",
+    "raw_requirements": "requirements",
+    "raw_benefits": "benefits",
+    "raw_experience_text": "experience",
+    "raw_reasons": "applyReasons"
+  },
+  "timestamps": {
+    "posted_at": "postedTime",
+    "updated_at": "updatedTime",
+    "deadline_at": "deadline",
+    "crawled_at": "scrapedAt",
+    "status": null
+  }
+}

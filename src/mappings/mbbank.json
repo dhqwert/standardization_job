@@ -1,0 +1,85 @@
+{
+  "source_metadata": {
+    "provider": "MBBANK",
+    "original_id": "id",
+    "original_url": null,
+    "slug": null
+  },
+  "company_info": {
+    "name": "company",
+    "slug": null,
+    "logo_url": null,
+    "profile_url": null,
+    "industries": null,
+    "size": null,
+    "address": null,
+    "country": null
+  },
+  "basic_info": {
+    "raw_title": "title",
+    "position": "rankName",
+    "levels": {
+      "type": "array",
+      "field": "level"
+    },
+    "contract_types": null,
+    "working_modes": null,
+    "locations": {
+      "type": "array",
+      "field": "location"
+    },
+    "quantity": null,
+    "gender": null,
+    "majors": {
+      "type": "array",
+      "field": "major"
+    },
+    "tags": {
+      "type": "concatenate_arrays",
+      "fields": ["skillTags", "relatedFields"]
+    }
+  },
+  "working_conditions": {
+    "working_time_text": null,
+    "working_days": null,
+    "overtime_policy": null,
+    "salary_min": "minSalary",
+    "salary_max": "maxSalary",
+    "salary_raw_text": {
+      "type": "salary_text",
+      "min_field": "minSalary",
+      "max_field": "maxSalary",
+      "raw_field": "salary"
+    },
+    "is_negotiable": {
+      "type": "negotiable",
+      "field": "salary"
+    }
+  },
+  "display_content": {
+    "raw_description": {
+      "type": "concatenate",
+      "fields": ["jobDescriptionVn", "missionContent"],
+      "separator": "\n\n"
+    },
+    "raw_requirements": {
+      "type": "concatenate",
+      "fields": ["experienceDescription", "foreignLanguage", "certificate", "otherRequirements"],
+      "separator": "\n"
+    },
+    "raw_benefits": "welfare",
+    "raw_experience_text": {
+      "type": "concatenate",
+      "fields": ["experienceRequired", "experienceDescription"],
+      "separator": "\n"
+    },
+    "raw_reasons": null
+  },
+  "timestamps": {
+    "posted_at": null,
+    "updated_at": null,
+    "deadline_at": "deadline",
+    "crawled_at": "scrapedAt",
+    "status": null
+  }
+}
