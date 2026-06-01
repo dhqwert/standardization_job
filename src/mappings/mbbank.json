@@ -1,9 +1,9 @@
 {
   "source_metadata": {
     "provider": "MBBANK",
-    "original_id": "id",
-    "original_url": null,
-    "slug": null
+    "original_id": "jobCode",
+    "original_url": "jobCode",
+    "slug": "jobCode"
   },
   "company_info": {
     "name": "company",
@@ -25,8 +25,11 @@
     "contract_types": null,
     "working_modes": null,
     "locations": {
-      "type": "array",
-      "field": "location"
+      "type": "concatenate_arrays",
+      "fields": [
+        "location",
+        "regionName"
+      ]
     },
     "quantity": null,
     "gender": null,
@@ -36,7 +39,10 @@
     },
     "tags": {
       "type": "concatenate_arrays",
-      "fields": ["skillTags", "relatedFields"]
+      "fields": [
+        "skillTags",
+        "relatedFields"
+      ]
     }
   },
   "working_conditions": {
@@ -51,26 +57,34 @@
       "max_field": "maxSalary",
       "raw_field": "salary"
     },
-    "is_negotiable": {
-      "type": "negotiable",
-      "field": "salary"
-    }
+    "currency": null
   },
   "display_content": {
     "raw_description": {
       "type": "concatenate",
-      "fields": ["jobDescriptionVn", "missionContent"],
+      "fields": [
+        "jobDescriptionVn",
+        "missionContent"
+      ],
       "separator": "\n\n"
     },
     "raw_requirements": {
       "type": "concatenate",
-      "fields": ["experienceDescription", "foreignLanguage", "certificate", "otherRequirements"],
+      "fields": [
+        "experienceDescription",
+        "foreignLanguage",
+        "certificate",
+        "otherRequirements"
+      ],
       "separator": "\n"
     },
     "raw_benefits": "welfare",
     "raw_experience_text": {
       "type": "concatenate",
-      "fields": ["experienceRequired", "experienceDescription"],
+      "fields": [
+        "experienceRequired",
+        "experienceDescription"
+      ],
       "separator": "\n"
     },
     "raw_reasons": null

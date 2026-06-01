@@ -34,15 +34,21 @@
       "field": "jobTypes"
     },
     "locations": {
-      "type": "array",
-      "field": "locations"
+      "type": "concatenate_arrays",
+      "fields": [
+        "locations",
+        "addresses"
+      ]
     },
     "quantity": null,
     "gender": null,
     "majors": null,
     "tags": {
       "type": "concatenate_arrays",
-      "fields": ["tags", "skills"]
+      "fields": [
+        "tags",
+        "skills"
+      ]
     }
   },
   "working_conditions": {
@@ -57,10 +63,7 @@
       "max_field": "salaryRange.max",
       "raw_field": "salary"
     },
-    "is_negotiable": {
-      "type": "negotiable",
-      "field": "salary"
-    }
+    "currency": "salaryRange.currency"
   },
   "display_content": {
     "raw_description": "jobDescription",

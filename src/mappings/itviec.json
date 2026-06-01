@@ -21,10 +21,7 @@
   "basic_info": {
     "raw_title": "title",
     "position": null,
-    "levels": {
-      "type": "array",
-      "field": "jobLevels"
-    },
+    "levels": null,
     "contract_types": {
       "type": "array",
       "field": "contract_types_str"
@@ -42,7 +39,10 @@
     "majors": null,
     "tags": {
       "type": "concatenate_arrays",
-      "fields": ["tags", "skills"]
+      "fields": [
+        "tags",
+        "skills"
+      ]
     }
   },
   "working_conditions": {
@@ -57,10 +57,7 @@
       "max_field": "maxSalary",
       "raw_field": "salary"
     },
-    "is_negotiable": {
-      "type": "negotiable",
-      "field": "salary"
-    }
+    "currency": "salary.currency"
   },
   "display_content": {
     "raw_description": "jobDescription",

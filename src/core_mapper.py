@@ -119,33 +119,12 @@ class DataMapper:
                 return list(set(combined)) if combined else []
                 
             elif op_type == "salary_text":
-                min_f = rule.get("min_field")
-                max_f = rule.get("max_field")
                 raw_f = rule.get("raw_field")
-                
                 raw = self._get_nested(data, raw_f)
-                if raw: return str(raw)
-                
-                min_v = self._get_nested(data, min_f)
-                max_v = self._get_nested(data, max_f)
-                
-                if min_v and max_v:
-                    return f"{min_v} - {max_v} VND"
-                elif min_v:
-                    return f"Từ {min_v} VND"
-                elif max_v:
-                    return f"Đến {max_v} VND"
-                return ""
+                return str(raw) if raw else ""
                 
             elif op_type == "negotiable":
-                field = rule.get("field")
-                val = self._get_nested(data, field)
-                if val is None:
-                    val = ""
-                if val and isinstance(val, str):
-                    lower_v = val.lower()
-                    return lower_v in ['negotiable', 'thỏa thuận', 'thương lượng']
-                return False
+                pass
                 
             elif op_type in ["segment_desc", "segment_req", "segment_ben"]:
                 # Try to get the raw combined text
@@ -205,20 +184,18 @@ class DataMapper:
                 std_job["basic_info"][list_key] = []
                 
         # string defaults
-        if not std_job["basic_info"].get("gender"):
-            std_job["basic_info"]["gender"] = "Không yêu cầu"
         if not std_job["timestamps"].get("status"):
             std_job["timestamps"]["status"] = "ACTIVE"
         if not std_job["timestamps"].get("crawled_at"):
             std_job["timestamps"]["crawled_at"] = datetime.utcnow().isoformat()
             
+        # Salary and Currency parsing is completely delegated to mapper.py -> parse_salary
+
         # Remove null strings just in case
         for section in ["basic_info", "display_content", "working_conditions", "company_info", "source_metadata"]:
             for k, v in std_job[section].items():
                 if v is None and k not in ["quantity", "country", "salary_min", "salary_max", "original_url", "slug", "logo_url", "profile_url", "industries", "size", "address"]:
-                    if k == "is_negotiable":
-                        std_job[section][k] = False
-                    elif isinstance(std_job[section][k], list):
+                    if isinstance(std_job[section][k], list):
                         pass
                     else:
                         std_job[section][k] = ""
@@ -238,15 +215,15 @@ class DataMapper:
                 "industries": [], "size": "", "address": "", "country": None
             },
             "basic_info": {
-                "raw_title": "", "normalized_title": "", "position": "",
+                "raw_title": "", "position": "",
                 "levels": [], "contract_types": [], "working_modes": [],
-                "locations": [], "quantity": "1", "gender": "Không yêu cầu",
+                "locations": [], "quantity": None, "gender": None,
                 "majors": [], "tags": []
             },
             "working_conditions": {
                 "working_time_text": "", "working_days": "", "overtime_policy": "",
                 "salary_min": None, "salary_max": None, "salary_raw_text": "",
-                "is_negotiable": False
+                "currency": "", "is_negotiable": False
             },
             "display_content": {
                 "raw_description": "", "raw_requirements": "", "raw_benefits": "",
