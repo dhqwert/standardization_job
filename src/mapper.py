@@ -127,8 +127,10 @@ def normalize_gender(raw: str) -> str:
 
 def standardize_job(job_data: dict, scraper_name: str) -> dict:
     std = data_mapper.map_job(job_data, scraper_name)
+    
     wc = std.get('working_conditions', {})
-
+    if isinstance(wc, str): wc = {}
+    
     salary_parsed = parse_salary(
         salary_raw_text=wc.get('salary_raw_text', ''),
         salary_min_raw=wc.get('salary_min'),
@@ -142,6 +144,8 @@ def standardize_job(job_data: dict, scraper_name: str) -> dict:
     std['working_conditions'] = wc
 
     bi = std.get('basic_info', {})
+    if isinstance(bi, str): bi = {}
+    
     bi['gender'] = normalize_gender(bi.get('gender', ''))
     std['basic_info'] = bi
 

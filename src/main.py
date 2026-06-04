@@ -37,9 +37,14 @@ def get_db_connection():
     )
 
 
+def get_mq_connection():
+    params = pika.URLParameters(RABBITMQ_CONN)
+    params.heartbeat = 0
+    return pika.BlockingConnection(params)
+
+
 def get_rabbitmq_channel():
-    params  = pika.URLParameters(RABBITMQ_CONN)
-    conn    = pika.BlockingConnection(params)
+    conn = get_mq_connection()
     channel = conn.channel()
     channel.queue_declare(queue=RAW_QUEUE, durable=True)
     return conn, channel
@@ -76,9 +81,16 @@ def process_batch(batch_data: dict, ch):
         try:
             std = standardize_job(raw_job, scraper_name)
 
-            wc = std.get('working_conditions', {})
             bi = std.get('basic_info', {})
+            if isinstance(bi, str): bi = {}
+            wc = std.get('working_conditions', {})
+            if isinstance(wc, str): wc = {}
             dc = std.get('display_content', {})
+            if isinstance(dc, str): dc = {}
+            sm = std.get('source_metadata', {})
+            if isinstance(sm, str): sm = {}
+            ci = std.get('company_info', {})
+            if isinstance(ci, str): ci = {}
 
             # ── GLiNER Extraction ───────────────────────────────────────────
             combined_text = ""
@@ -119,31 +131,31 @@ def process_batch(batch_data: dict, ch):
                 predictions = []
 
             draft_metadata = []
-            for pred in predictions:
-                label = pred.get("label", "").upper()
-                text = pred.get("text", "").strip()
-                if not text: continue
-                if label in ["SKILL", "EXPERIENCE", "MAJOR"]:
-                    draft_metadata.append({
-                        "text": text,
-                        "label": label,
-                        "start": pred.get("start", 0),
-                        "end": pred.get("end", 0),
-                        "score": pred.get("score", 1.0)
-                    })
+            if isinstance(predictions, list):
+                for pred in predictions:
+                    if not isinstance(pred, dict): continue
+                    label = pred.get("label", "").upper()
+                    text = pred.get("text", "").strip()
+                    if not text: continue
+                    if label in ["SKILL", "EXPERIENCE", "MAJOR"]:
+                        draft_metadata.append({
+                            "text": text,
+                            "label": label,
+                            "start": pred.get("start", 0),
+                            "end": pred.get("end", 0),
+                            "score": pred.get("score", 1.0)
+                        })
 
             # ── INSERT job_postings ──────────────────────────────────────────
             cursor.execute("""
                 INSERT INTO job_postings (
-                    source_url, job_title, job_description, status,
+                    source_url, status,
                     source_metadata, company_info, basic_info,
                     working_conditions, display_content, draft_extracted_metadata
                 )
-                VALUES (%s, %s, %s, 'PENDING_REVIEW', %s, %s, %s, %s, %s, %s)
+                VALUES (%s, 'PENDING_REVIEW', %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (source_url)
                 DO UPDATE SET
-                    job_title = EXCLUDED.job_title,
-                    job_description = EXCLUDED.job_description,
                     status = 'PENDING_REVIEW',
                     source_metadata = EXCLUDED.source_metadata,
                     company_info = EXCLUDED.company_info,
@@ -154,11 +166,9 @@ def process_batch(batch_data: dict, ch):
                     updated_at = CURRENT_TIMESTAMP
                 RETURNING id
             """, (
-                std['source_metadata'].get('original_url'),
-                bi.get('raw_title'),
-                dc.get('raw_requirements') or dc.get('raw_description'),
-                json.dumps(std['source_metadata']),
-                json.dumps(std['company_info']),
+                sm.get('original_url', raw_job.get('url')),
+                json.dumps(sm),
+                json.dumps(ci),
                 json.dumps(bi),
                 json.dumps(wc),
                 json.dumps(dc),
