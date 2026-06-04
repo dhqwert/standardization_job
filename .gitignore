@@ -1,2 +1,4 @@
 .env
-sample_for_train.py
+__pycache__/
+*.pyc
+logs/

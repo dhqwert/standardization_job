@@ -1,12 +1,13 @@
 """
 main.py — Standardization Job Service
-Consumer: raw_jobs_queue → normalize → INSERT DB → publish ai_processing_queue
+Consumer: raw_jobs_queue → normalize → call GLiNER → INSERT DB
 """
 import os
 import json
 import pika
 import psycopg2
 import sys
+import requests
 from dotenv import load_dotenv
 from mapper import standardize_job
 
@@ -16,7 +17,9 @@ sys.stdout.reconfigure(encoding='utf-8')
 # ── RabbitMQ ────────────────────────────────────────────────────────────────
 RABBITMQ_CONN     = os.getenv('RABBITMQ_CONN', 'amqp://agi_rabbitmq_user:agi_rabbitmq_user@localhost:5672/agi_rabbitmq_user')
 RAW_QUEUE         = os.getenv('RAW_JOBS_QUEUE',      'raw_jobs_queue')
-AI_QUEUE          = os.getenv('AI_PROCESSING_QUEUE', 'ai_processing_queue')
+
+# ── API ─────────────────────────────────────────────────────────────────────
+GLINER_BASE_URL   = os.getenv('GLINER_BASE_URL', 'http://localhost:7777')
 
 # ── Database ─────────────────────────────────────────────────────────────────
 DB_HOST     = os.getenv('DB_HOST',     'localhost')
@@ -39,7 +42,6 @@ def get_rabbitmq_channel():
     conn    = pika.BlockingConnection(params)
     channel = conn.channel()
     channel.queue_declare(queue=RAW_QUEUE, durable=True)
-    channel.queue_declare(queue=AI_QUEUE,  durable=True)
     return conn, channel
 
 
@@ -78,24 +80,77 @@ def process_batch(batch_data: dict, ch):
             bi = std.get('basic_info', {})
             dc = std.get('display_content', {})
 
+            # ── GLiNER Extraction ───────────────────────────────────────────
+            combined_text = ""
+            
+            majors = bi.get('majors', [])
+            if majors:
+                combined_text += "[MAJOR]:\n- " + ", ".join(majors) + "\n\n"
+                
+            tags = bi.get('tags', [])
+            if tags:
+                combined_text += "[TAG]:\n- " + ", ".join(tags) + "\n\n"
+                
+            desc_str = dc.get('raw_description', '')
+            if desc_str:
+                combined_text += "[DESCRIPTION]:\n" + desc_str + "\n\n"
+                
+            req_str = dc.get('raw_requirements', '')
+            if req_str:
+                combined_text += "[REQUIREMENTS]:\n" + req_str + "\n\n"
+                
+            exp_str = dc.get('raw_experience_text', '')
+            if exp_str:
+                combined_text += "[EXPERIENCE]:\n" + exp_str + "\n"
+                
+            combined_text = combined_text.strip()
+            
+            
+            try:
+                response = requests.post(
+                    f"{GLINER_BASE_URL}/predict",
+                    json={"text": combined_text, "labels": ["SKILL", "EXPERIENCE"]},
+                    timeout=30
+                )
+                response.raise_for_status()
+                predictions = response.json()
+            except Exception as e:
+                print(f"[!] GLiNER API Error: {e}")
+                predictions = []
+
+            draft_metadata = []
+            for pred in predictions:
+                label = pred.get("label", "").upper()
+                text = pred.get("text", "").strip()
+                if not text: continue
+                if label in ["SKILL", "EXPERIENCE", "MAJOR"]:
+                    draft_metadata.append({
+                        "text": text,
+                        "label": label,
+                        "start": pred.get("start", 0),
+                        "end": pred.get("end", 0),
+                        "score": pred.get("score", 1.0)
+                    })
+
             # ── INSERT job_postings ──────────────────────────────────────────
             cursor.execute("""
                 INSERT INTO job_postings (
                     source_url, job_title, job_description, status,
                     source_metadata, company_info, basic_info,
-                    working_conditions, display_content
+                    working_conditions, display_content, draft_extracted_metadata
                 )
-                VALUES (%s, %s, %s, 'PENDING_EMBEDDING', %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, 'PENDING_REVIEW', %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (source_url)
                 DO UPDATE SET
                     job_title = EXCLUDED.job_title,
                     job_description = EXCLUDED.job_description,
-                    status = 'PENDING_EMBEDDING',
+                    status = 'PENDING_REVIEW',
                     source_metadata = EXCLUDED.source_metadata,
                     company_info = EXCLUDED.company_info,
                     basic_info = EXCLUDED.basic_info,
                     working_conditions = EXCLUDED.working_conditions,
                     display_content = EXCLUDED.display_content,
+                    draft_extracted_metadata = EXCLUDED.draft_extracted_metadata,
                     updated_at = CURRENT_TIMESTAMP
                 RETURNING id
             """, (
@@ -107,33 +162,14 @@ def process_batch(batch_data: dict, ch):
                 json.dumps(bi),
                 json.dumps(wc),
                 json.dumps(dc),
+                json.dumps(draft_metadata),
             ))
 
             internal_job_id = cursor.fetchone()[0]
             std['internal_job_id'] = str(internal_job_id)
             standardized_list.append(std)
 
-            # ── Publish sang ai_processing_queue ────────────────────────────
-            ai_payload = {
-                'internal_job_id': str(internal_job_id),
-                'text_for_ai': {
-                    'tags':       bi.get('tags', []),
-                    'majors':     bi.get('majors', []),
-                    'description':   dc.get('raw_description', ''),
-                    'requirements':  dc.get('raw_requirements', ''),
-                    'experience':    dc.get('raw_experience_text', ''),
-                },
-                'location': bi.get('locations', []),
-            }
-
-            ch.basic_publish(
-                exchange='',
-                routing_key=AI_QUEUE,
-                body=json.dumps(ai_payload, ensure_ascii=False),
-                properties=pika.BasicProperties(delivery_mode=2),
-            )
-            print(f"[✓] Job {internal_job_id} → DB + ai_processing_queue  "
-                  f"(gender={bi.get('gender')}, is_negotiable={wc.get('is_negotiable')})")
+            print(f"[✓] Job {internal_job_id} → DB (PENDING_REVIEW) with {len(draft_metadata)} drafted entities")
 
             conn.commit()
         except Exception as e:
@@ -163,7 +199,7 @@ def main():
     print("=" * 60)
     print("  Standardization Job Service — Starting")
     print(f"  Consuming : {RAW_QUEUE}")
-    print(f"  Publishing: {AI_QUEUE}")
+    print(f"  GLiNER URL: {GLINER_BASE_URL}")
     print("=" * 60)
 
     mq_conn, mq_channel = get_rabbitmq_channel()
