@@ -8,7 +8,6 @@ from core_mapper import DataMapper
 import os
 
 mappings_dir = os.path.join(os.path.dirname(__file__), 'mappings')
-data_mapper = DataMapper(mappings_dir)
 
 # ---------------------------------------------------------------------------
 # SALARY NORMALIZATION
@@ -125,7 +124,8 @@ def normalize_gender(raw: str) -> str:
 # MAIN STANDARDIZE FUNCTION
 # ---------------------------------------------------------------------------
 
-def standardize_job(job_data: dict, scraper_name: str) -> dict:
+def standardize_job(job_data: dict, scraper_name: str, db_conn=None) -> dict:
+    data_mapper = DataMapper(mappings_dir=mappings_dir, db_conn=db_conn)
     std = data_mapper.map_job(job_data, scraper_name)
     
     wc = std.get('working_conditions', {})

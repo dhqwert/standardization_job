@@ -47,12 +47,31 @@ class GenericJobSegmenter:
         return desc, req, ben
 
 class DataMapper:
-    def __init__(self, mappings_dir):
+    def __init__(self, mappings_dir=None, db_conn=None):
         self.mappings = {}
         self.segmenter = GenericJobSegmenter()
-        self._load_mappings(mappings_dir)
-        
-    def _load_mappings(self, mappings_dir):
+        if mappings_dir:
+            self._load_mappings_from_files(mappings_dir)
+        if db_conn:
+            self._load_mappings_from_db(db_conn)
+            
+    def _load_mappings_from_db(self, db_conn):
+        try:
+            cur = db_conn.cursor()
+            cur.execute("SELECT provider, mapping_config FROM crawl_sources WHERE mapping_config IS NOT NULL AND deleted_at IS NULL")
+            rows = cur.fetchall()
+            for row in rows:
+                provider_name = str(row[0]).upper()
+                config = row[1]
+                if isinstance(config, str):
+                    config = json.loads(config)
+                # Override file-based config with DB config
+                self.mappings[provider_name] = config
+            cur.close()
+        except Exception as e:
+            print(f"[!] Error loading mappings from DB: {e}")
+
+    def _load_mappings_from_files(self, mappings_dir):
         if not os.path.exists(mappings_dir):
             return
             

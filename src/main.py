@@ -79,7 +79,7 @@ def process_batch(batch_data: dict, ch):
 
     for raw_job in raw_jobs:
         try:
-            std = standardize_job(raw_job, scraper_name)
+            std = standardize_job(raw_job, scraper_name, db_conn=conn)
 
             bi = std.get('basic_info', {})
             if isinstance(bi, str): bi = {}
