@@ -1,9 +1,9 @@
 {
   "source_metadata": {
     "provider": "MBBANK",
-    "original_id": "jobCode",
-    "original_url": "jobCode",
-    "slug": "jobCode"
+    "original_id": "id",
+    "original_url": "url",
+    "slug": null
   },
   "company_info": {
     "name": "company",

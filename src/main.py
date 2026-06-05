@@ -70,7 +70,7 @@ def save_standardized_local(jobs: list):
 
 
 def process_batch(batch_data: dict, ch):
-    scraper_name = batch_data.get('scraper', 'UNKNOWN')
+    scraper_name = batch_data.get('scraperId') or batch_data.get('scraper', 'UNKNOWN')
     raw_jobs     = batch_data.get('jobs', [])
 
     conn   = get_db_connection()
@@ -119,20 +119,25 @@ def process_batch(batch_data: dict, ch):
             
             
             try:
+                # Debug logging
+                # print(f"Sending text of length {len(combined_text)} to GLiNER...")
                 response = requests.post(
                     f"{GLINER_BASE_URL}/predict",
-                    json={"text": combined_text, "labels": ["SKILL", "EXPERIENCE"]},
+                    json={"text": combined_text, "labels": ["SKILL", "EXPERIENCE", "MAJOR"]},
                     timeout=30
                 )
                 response.raise_for_status()
                 predictions = response.json()
+                # print(f"GLiNER Response: {predictions}")
             except Exception as e:
                 print(f"[!] GLiNER API Error: {e}")
                 predictions = []
 
             draft_metadata = []
-            if isinstance(predictions, list):
-                for pred in predictions:
+            entities_list = predictions.get("entities", []) if isinstance(predictions, dict) else predictions
+            
+            if isinstance(entities_list, list):
+                for pred in entities_list:
                     if not isinstance(pred, dict): continue
                     label = pred.get("label", "").upper()
                     text = pred.get("text", "").strip()
@@ -146,7 +151,10 @@ def process_batch(batch_data: dict, ch):
                             "score": pred.get("score", 1.0)
                         })
 
-            # ── INSERT job_postings ──────────────────────────────────────────
+            source_url = sm.get('original_url') or raw_job.get('url')
+            if not source_url:
+                print(f"[-] Rejected Job {raw_job.get('id', raw_job.get('jobId', 'UNKNOWN'))} because source_url is null.")
+                continue
             cursor.execute("""
                 INSERT INTO job_postings (
                     source_url, status,
@@ -166,7 +174,7 @@ def process_batch(batch_data: dict, ch):
                     updated_at = CURRENT_TIMESTAMP
                 RETURNING id
             """, (
-                sm.get('original_url', raw_job.get('url')),
+                source_url,
                 json.dumps(sm),
                 json.dumps(ci),
                 json.dumps(bi),
@@ -196,7 +204,8 @@ def process_batch(batch_data: dict, ch):
 def callback(ch, method, properties, body):
     try:
         batch_data = json.loads(body)
-        print(f"\n[*] Received batch from '{batch_data.get('scraper')}' "
+        scraper_name = batch_data.get('scraperId') or batch_data.get('scraper', 'UNKNOWN')
+        print(f"\n[*] Received batch from '{scraper_name}' "
               f"— {len(batch_data.get('jobs', []))} jobs")
         process_batch(batch_data, ch)
         ch.basic_ack(delivery_tag=method.delivery_tag)
